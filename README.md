@@ -29,6 +29,15 @@
 
 如需讲授精度评价，还需另行提供并上传 `HZ2025_reference_validation_20m.tif`。基础课堂不需要该文件。
 
+## 数据来源与制作过程
+
+这两个课堂输入文件不是两个可以由 OGE 自动联网读取的远程地址：
+
+- `HZ_boundary.geojson`：原始行政区边界来自 geoBoundaries 的中国 ADM2 公开数据（2017 年代表年份，PDDL 1.0）。本项目从中提取杭州市范围，整理为单要素 WGS84 GeoJSON，并改成课堂使用的文件名。
+- `HZ2025_reference_train_20m.tif`：不是直接下载的训练样本成品。它由本地脚本从 Esri / Impact Observatory / Microsoft Sentinel-2 Land Cover 2025 参考产品中派生：先转换为 20 米网格，再筛选 3×3 邻域内类别一致的像元，最后按七类各抽取 1000 个训练像元。它是自动生成的参考标签，不是实地调查真值。
+
+GitHub 只负责分发文件。学生必须把这两个文件上传到自己的 OGE `myData`，才能由课堂代码读取。公开的 GitHub 文件链接不能直接替代 `myData/文件名`；`Feature.loadFeatureFromUpload` 和 `service.getCoverage` 读取的是 OGE 已登记且当前账号有权限的资源。
+
 ## 分类体系
 
 | 编码 | 类别 | 地图颜色 |
@@ -123,6 +132,22 @@ EVALUATE_RESULT = False
 ### 提示找不到 `myData` 数据
 
 检查两个输入文件是否已经上传到当前登录的 OGE 账号，并确认上传名称与代码路径一致。每位学生的 `myData` 相互独立，教师账号中的个人数据不会自动出现在学生账号中。
+
+### 使用 GitHub 在线链接时提示无权限
+
+GitHub 上“可以下载”不等于 OGE 服务器“可以作为平台数据资源读取”。不要把 GitHub `blob` 或 `raw` 地址直接填入 `Feature.loadFeatureFromUpload`、`service.getCoverage`。请先下载文件，再上传到当前学生账号的 OGE `myData`；或者由教师将数据发布为 OGE 共享资源并提供具有访问权限的资源 ID。
+
+### 提示集合为空（empty collection / 空集）
+
+这通常发生在 Sentinel-2 影像检索阶段，和两个训练输入文件是否能够下载不是同一个问题。依次检查：
+
+1. `productID` 是否与 OGE 数据中心当前显示的产品编号完全一致；
+2. 时间范围是否在该产品的可用时段内；
+3. `bbox` 是否按 `[最小经度, 最小纬度, 最大经度, 最大纬度]` 填写；
+4. 云量上限是否过严。课堂排查时可先将 `cloudCoverMax` 从 `5` 放宽到 `20`；
+5. 先用小范围或单景完成影像读取测试，再运行全市合成和随机森林训练。
+
+影像集合为空时不要继续执行 `mosaic` 和分类，否则后续算子只会继续报错。OGE 数据目录、账号权限和可用影像会变化，正式上课前应在教师账号中重新做一次最小检索测试。
 
 ### 运行时间较长
 
