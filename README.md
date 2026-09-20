@@ -33,7 +33,7 @@
 
 这两个课堂输入文件不是两个可以由 OGE 自动联网读取的远程地址：
 
-- `HZ_boundary.geojson`：原始行政区边界来自 geoBoundaries 的中国 ADM2 公开数据（2017 年代表年份，PDDL 1.0）。本项目从中提取杭州市范围，整理为单要素 WGS84 GeoJSON，并改成课堂使用的文件名。
+- `HZ_boundary.geojson`：当前文件实际来自 GADM 4.1 的中国二级行政区数据，从 `gadm41_CHN_2.json.zip` 中提取 `GID_2 = CHN.31.1_1`（Hangzhou），整理为单要素 WGS84 GeoJSON。它不是 OGE 平台数据。GADM 允许学术及其他非商业用途，但未经许可不允许再分发或商业使用；公开课程材料需要另行处理该许可问题。
 - `HZ2025_reference_train_20m.tif`：不是直接下载的训练样本成品。它由本地脚本从 Esri / Impact Observatory / Microsoft Sentinel-2 Land Cover 2025 参考产品中派生：先转换为 20 米网格，再筛选 3×3 邻域内类别一致的像元，最后按七类各抽取 1000 个训练像元。它是自动生成的参考标签，不是实地调查真值。
 
 GitHub 只负责分发文件。学生必须把这两个文件上传到自己的 OGE `myData`，才能由课堂代码读取。公开的 GitHub 文件链接不能直接替代 `myData/文件名`；`Feature.loadFeatureFromUpload` 和 `service.getCoverage` 读取的是 OGE 已登记且当前账号有权限的资源。
