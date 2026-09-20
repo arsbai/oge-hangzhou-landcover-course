@@ -13,10 +13,21 @@ import oge
 oge.initialize()
 service = oge.Service.initialize()
 
-BBOX = [118.3333, 29.1965, 120.9271, 30.5557]
 NUM_TREES = 30          # 课堂演示；正式计算可改为 100
-EXPORT_RESULT = False   # True：提交结果导出
+EXPORT_RESULT = True    # True：提交全市分类批处理任务
+SHOW_RESULT_ON_MAP = False  # 全市同步显示容易超时；仅排查时改为 True
 EVALUATE_RESULT = False # True：读取验证标签并计算参考一致性
+
+# 这 6 个是 OGE 数据中心的 coverageID，不是 Earth Search 的 S2A_/S2B_ 场景编号。
+# 已于 2026-09-20 在 OGE 开发中心逐景验证，可覆盖杭州市研究区。
+SCENE_IDS = [
+    "T50RQU_20251128T023939",
+    "T50RPT_20251128T023939",
+    "T50RQT_20251128T023939",
+    "T51RTP_20250916T024141",
+    "T50RPU_20251121T024919",
+    "T50RPT_20251121T024919",
+]
 
 # 1. 读取研究区与训练标签
 boundary = service.getProcess("Feature.loadFeatureFromUpload").execute(
@@ -25,13 +36,14 @@ boundary = service.getProcess("Feature.loadFeatureFromUpload").execute(
 )
 labels = service.getCoverage("myData/HZ2025_reference_train_20m.tif")
 
-# 2. 检索并合成 2025 年秋季 Sentinel-2 L2A 影像
-images = service.getCoverageCollection(
-    productID="S2_MSIL2A",
-    datetime="2025-09-01 00:00:00,2025-11-30 23:59:59",
-    bbox=BBOX,
-    cloudCoverMin=0,
-    cloudCoverMax=5,
+# 2. 按固定 OGE coverageID 读取并合成 Sentinel-2 L2A 影像
+scenes = [
+    service.getCoverage(coverageID=scene_id, productID="S2_MSIL2A")
+    for scene_id in SCENE_IDS
+]
+images = service.getProcess("CoverageCollection.mergeCoverages").execute(
+    scenes,
+    SCENE_IDS,
 )
 image = service.getProcess("CoverageCollection.mosaic").execute(images, "median")
 image = service.getProcess("Coverage.selectBands").execute(
@@ -83,7 +95,7 @@ result = service.getProcess("Coverage.clipRasterByMaskLayerByGDAL").execute(
 )
 result = service.getProcess("Coverage.toUint8").execute(result)
 
-# 6. 设置类别颜色并显示结果
+# 6. 设置类别颜色；全市结果默认走批处理导出，避免同步地图请求超时
 colors = [
     "#0064c8", # 水体
     "#006400", # 林地
@@ -93,11 +105,12 @@ colors = [
     "#b4b4b4", # 裸地
     "#bbcc33", # 灌木草地
 ]
-result.styles({"min": 1, "max": 7, "palette": colors}).getMap(
-    "杭州2025_随机森林七类_20m"
-)
-boundary.styles(["#FFFFFF"]).getMap("杭州市研究区边界")
-oge.mapclient.centerMap(119.60, 29.90, 9)
+if SHOW_RESULT_ON_MAP:
+    result.styles({"min": 1, "max": 7, "palette": colors}).getMap(
+        "杭州2025_随机森林七类_20m"
+    )
+    boundary.styles(["#FFFFFF"]).getMap("杭州市研究区边界")
+    oge.mapclient.centerMap(119.60, 29.90, 9)
 
 # 7. 可选：读取验证标签并计算参考一致性
 if EVALUATE_RESULT:
@@ -113,6 +126,6 @@ if EVALUATE_RESULT:
     )
     metrics.log("Spatial_holdout_reference_agreement")
 
-# 8. 可选：导出单波段类别栅格
+# 8. 默认：提交单波段类别栅格批处理任务
 if EXPORT_RESULT:
     result.export("Hangzhou_2025_RF_classes_20m")
