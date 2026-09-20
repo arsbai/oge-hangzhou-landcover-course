@@ -1,5 +1,9 @@
 __pycache__/
 *.pyc
+
+# 默认忽略其他大型数据文件，只保留课堂必需的两个输入文件。
 *.tif
 *.tiff
 *.geojson
+!HZ_boundary.geojson
+!HZ2025_reference_train_20m.tif
